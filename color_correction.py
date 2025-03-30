@@ -31,7 +31,7 @@ class ColorCorrection(nn.Module):
 
 
     @staticmethod
-    def blur(x: torch.Tensor, dilation: int, kernel: Tensor) -> Tensor:
+    def multi_scale_blur(x: torch.Tensor, dilation: int, kernel: Tensor) -> Tensor:
         pad = dilation * ((kernel.shape[2] - 1) // 2)
         x = F.pad(x, (pad, pad, pad, pad), mode="replicate")
         return F.conv2d(x, kernel, groups=3, dilation=dilation)
@@ -52,11 +52,13 @@ class ColorCorrection(nn.Module):
         ref_low_freq = ref
         x_high_freq = torch.zeros_like(x)
         for i in range(self.levels):
-            x_low_freq = self.blur(x, dilation=2**i, kernel=kernel)
+            dilation = 2**i
+
+            x_low_freq = self.multi_scale_blur(x, dilation=dilation, kernel=kernel)
             x_high_freq += x - x_low_freq
             x = x_low_freq
 
-            ref_low_freq = self.blur(ref_low_freq, dilation=2**i, kernel=kernel)
+            ref_low_freq = self.multi_scale_blur(ref_low_freq, dilation=dilation, kernel=kernel)
 
         return x_high_freq + ref_low_freq
 
